@@ -180,6 +180,9 @@ if __name__ == '__main__':
     thresholds = np.arange(0.6, 1.0, 0.001)
 
     evaluation = {}
+    predictionDict = {}
+    embList = []
+    graphList = []
     
     for idx, row in groundtruth.iterrows():
         if row['word'] in list(bestParams.keys()):
@@ -207,14 +210,22 @@ if __name__ == '__main__':
 
                     bestAccuracy = 0
                     bestTh = 0
+                    bestPrediction = None
                     for th in thresholds:
                         prediction = predict(tmpFrame, uniqueLabels, th)
                         accuracy = metrics.accuracy_score([prediction], [row['type']])
-                        #f1 = metrics.f1_score([prediction], [row['type']])
                         if accuracy > bestAccuracy:
                             bestAccuracy = accuracy
                             bestTh = th
+                            bestPrediction = prediction
+                            break
+                        else:
+                            bestPrediction = prediction
                     evaluation[(row['word'], name)] = (bestTh, bestAccuracy)
+                    if name == 'emb':
+                        embList.append(bestPrediction)
+                    elif name == 'graph':
+                        graphList.append(bestPrediction)
 
                     # for plotting
                     pca = PCA(2)
@@ -231,9 +242,24 @@ if __name__ == '__main__':
             plt.savefig(os.path.join(outputPath, row['word']+'.png'))
 
     serialize(os.path.join(outputPath, 'evaluation.dct'), evaluation)
+
     logger.info('[EVALUATION]')
+    graphAccuracy = metrics.accuracy_score(groundtruth['type'].values.tolist(), graphList)
+    graphPrecision = metrics.average_precision_score(groundtruth['type'].values.tolist(), graphList)
+    graphF1micro = metrics.f1_score(groundtruth['type'].values.tolist(), graphList, average='micro')
+    graphF1macro = metrics.f1_score(groundtruth['type'].values.tolist(), graphList, average='macro')
+    graphF1 = metrics.f1_score(groundtruth['type'].values.tolist(), graphList)
+
+    embAccuracy = metrics.accuracy_score(groundtruth['type'].values.tolist(), embList)
+    embPrecision = metrics.average_precision_score(groundtruth['type'].values.tolist(), embList)
+    embF1micro = metrics.f1_score(groundtruth['type'].values.tolist(), embList, average='micro')
+    embF1macro = metrics.f1_score(groundtruth['type'].values.tolist(), embList, average='macro')
+    embF1 = metrics.f1_score(groundtruth['type'].values.tolist(), embList)
+
+    logger.info('[GRAPH]\nAverage Accuracy: {}\nAverage Precision: {}\nF1-score: {}\nF1-micro: {}\nF1-macro: {}'.format(graphAccuracy, graphPrecision, graphF1, graphF1micro, graphF1macro))
+    logger.info('[EMB]\nAverage Accuracy: {}\nAverage Precision: {}\nF1-score: {}\nF1-micro: {}\nF1-macro: {}'.format(embAccuracy, embPrecision, embF1, embF1micro, embF1macro))
     
-    accuracyList = []
+    '''accuracyList = []
     for n in ['emb', 'graph']:
         avg = 0
         for k, item in evaluation.items():
@@ -241,7 +267,7 @@ if __name__ == '__main__':
                 avg += item[1]
         acc = avg / (len(evaluation)/2)
         accuracyList.append(acc)
-        logger.info('[AVERAGE ACCURACY {}] {}'.format(n, acc))
+        logger.info('[AVERAGE ACCURACY {}] {}'.format(n, acc))'''
         
 
 
