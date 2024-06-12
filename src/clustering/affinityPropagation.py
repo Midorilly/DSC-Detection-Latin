@@ -172,7 +172,7 @@ if __name__ == '__main__':
     # grid-search
     #silhouettes = gridSearch()
     #serialize(os.path.join(outputPath, 'silhouettesScore-3hyp.dct'), silhouettes)
-    silhouettes = deserialize(os.path.join(outputPath, 'silhouettesScore05.dct'))
+    silhouettes = deserialize(os.path.join('../evaluation', 'silhouettesScore05.dct'))
     bestParams = getBestParams(silhouettes)
     print(bestParams)
 
