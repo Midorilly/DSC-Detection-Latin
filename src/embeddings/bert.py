@@ -130,7 +130,7 @@ def serialize(file, item):
     pickle.dump(item, pkl)
     pkl.close
 
-# python3 ML/src/bert.py --bertPath latin-bert/models/latin_bert/ --tokenizerPath latin-bert/models/subword_tokenizer_latin/latin.subword.encoder --sentencesPath  --outputPath 
+# python3 ML/src/bert.py --bertPath ../models/latin_bert/ --tokenizerPath ../models/subword_tokenizer_latin/latin.subword.encoder  
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
