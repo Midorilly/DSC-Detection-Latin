@@ -40,7 +40,7 @@ def getDataset(path, word):
     dataset = pd.concat(frames, ignore_index=True)
     return dataset
 
-def getExternalKnowledge(dataset : pd.DataFrame):
+def getExternalKnowledge(dataset : pd.DataFrame, mode, embeddings):
 
     dates = []
     authors = []
@@ -55,6 +55,12 @@ def getExternalKnowledge(dataset : pd.DataFrame):
             for o in info:
                 authors.append(o.authorLabel)
                 books.append(o.bookLabel)  
+                if mode == 'concat':
+                    authorEmb = getEmbedding(embeddings, o.author)
+                    encodedAuthors.append(authorEmb)
+                    bookEmb = getEmbedding(embeddings, o.book)
+                    encodedBooks.append(bookEmb)
+
             for o in period:
                 if '-' in o.date or '0000' in o.date:
                     dates.append('BC')
@@ -64,26 +70,36 @@ def getExternalKnowledge(dataset : pd.DataFrame):
             dropped += 1
             updatedDataset = updatedDataset.drop(index=i)
 
-    labelEncoder = LabelEncoder()
+    if mode == 'naive':
+        labelEncoder = LabelEncoder()
+        encodedAuthors = labelEncoder.fit_transform(authors)
+        encodedBooks = labelEncoder.fit_transform(books)
 
-    encodedAuthors = labelEncoder.fit_transform(authors)
-    encodedBooks = labelEncoder.fit_transform(books)
     updatedDataset['date'] = pd.Series(dates, index=updatedDataset.index)
     updatedDataset['author'] = pd.Series(authors, index=updatedDataset.index)
     updatedDataset['book'] = pd.Series(books, index=updatedDataset.index)
     updatedDataset['encodedAuthor'] = pd.Series(encodedAuthors, index=updatedDataset.index)
     updatedDataset['encodedBook'] = pd.Series(encodedBooks, index=updatedDataset.index)
 
-    updatedDataset = concatFeatures(updatedDataset)
+    updatedDataset = combineFeatures(updatedDataset, mode)
 
     return updatedDataset
 
-def concatFeatures(dataset):
-    features = []
-    for i, row in dataset.iterrows():
-        features.append([row['encodedAuthor']*0.5, row['encodedBook']*0.5] + row['target'].tolist())
-    dataset['features'] = features
+def getEmbedding(embeddings, node):
+    return embeddings[str(node)]
 
+def combineFeatures(dataset, mode):
+    features = []
+    if mode == 'naive':
+        for i, row in dataset.iterrows():
+            features.append([row['encodedAuthor']*0.5, row['encodedBook']*0.5] + row['target'].tolist())
+    elif mode == 'concat':
+        for i, row in dataset.iterrows():
+            c = row['encodedAuthor'].tolist() + row['encodedBook'].tolist() + row['target'].tolist()
+            features.append(c)
+    
+    dataset['features'] = features
+    
     return dataset
 
 def predict(dataset, uniqueLabels, threshold):
@@ -162,17 +178,21 @@ if __name__ == '__main__':
     parser.add_argument('-s', '--sentencesPath', help='path to sentences', required=True)
     parser.add_argument('-g', '--groundtruthPath', help='path to groundtruth', required=True)
     parser.add_argument('-o', '--outputPath', help='path to output', required=True)
+    parser.add_argument('-e', '--embeddingsPath', help='path to node embeddings', required=True)
+    parser.add_argument('-m', '--mode', help='concat/naive', required=True)
     args = vars(parser.parse_args())
     sentencesPath=args['sentencesPath']
     groundtruthPath=args['groundtruthPath']
     outputPath=args['outputPath']
+    embeddingsPath=args['embeddingsPath']
+    mode=args['mode']
 
     importlib.reload(graphQuery)
-
+    embeddings = deserialize(embeddingsPath)
     # grid-search
     #silhouettes = gridSearch()
     #serialize(os.path.join(outputPath, 'silhouettesScore-3hyp.dct'), silhouettes)
-    silhouettes = deserialize(os.path.join('../evaluation', 'silhouettesScore05.dct'))
+    silhouettes = deserialize(os.path.join(outputPath, 'silhouettesScore.dct'))
     bestParams = getBestParams(silhouettes)
     print(bestParams)
 
@@ -192,10 +212,14 @@ if __name__ == '__main__':
             dataset = getDataset(sentencesPath, row['word'])
             enhancedDataset = getExternalKnowledge(dataset)
 
-            Y = np.array(enhancedDataset['target'].values.tolist())
+            # for evaluating BERT only 
+            #data = [(Y, 'emb', enhancedDataset)] 
+            #Y = np.array(enhancedDataset['target'].values.tolist())
+
             # new features
             X = np.array(enhancedDataset['features'].values.tolist())
-            data = [(Y, 'emb', enhancedDataset), (X, 'graph', enhancedDataset)]
+            
+            data = [(X, 'graph', enhancedDataset)]
             i = 1
             fig = plt.figure(figsize=(10, 5))
             for (set, name, frame) in data:   
@@ -250,24 +274,15 @@ if __name__ == '__main__':
     graphF1macro = metrics.f1_score(groundtruth['type'].values.tolist(), graphList, average='macro')
     graphF1 = metrics.f1_score(groundtruth['type'].values.tolist(), graphList)
 
-    embAccuracy = metrics.accuracy_score(groundtruth['type'].values.tolist(), embList)
-    embPrecision = metrics.average_precision_score(groundtruth['type'].values.tolist(), embList)
-    embF1micro = metrics.f1_score(groundtruth['type'].values.tolist(), embList, average='micro')
-    embF1macro = metrics.f1_score(groundtruth['type'].values.tolist(), embList, average='macro')
-    embF1 = metrics.f1_score(groundtruth['type'].values.tolist(), embList)
+    #embAccuracy = metrics.accuracy_score(groundtruth['type'].values.tolist(), embList)
+    #embPrecision = metrics.average_precision_score(groundtruth['type'].values.tolist(), embList)
+    #embF1micro = metrics.f1_score(groundtruth['type'].values.tolist(), embList, average='micro')
+    #embF1macro = metrics.f1_score(groundtruth['type'].values.tolist(), embList, average='macro')
+    #embF1 = metrics.f1_score(groundtruth['type'].values.tolist(), embList)
 
-    logger.info('[GRAPH]\nAverage Accuracy: {}\nAverage Precision: {}\nF1-score: {}\nF1-micro: {}\nF1-macro: {}'.format(graphAccuracy, graphPrecision, graphF1, graphF1micro, graphF1macro))
-    logger.info('[EMB]\nAverage Accuracy: {}\nAverage Precision: {}\nF1-score: {}\nF1-micro: {}\nF1-macro: {}'.format(embAccuracy, embPrecision, embF1, embF1micro, embF1macro))
-    
-    '''accuracyList = []
-    for n in ['emb', 'graph']:
-        avg = 0
-        for k, item in evaluation.items():
-            if k[1] == n:
-                avg += item[1]
-        acc = avg / (len(evaluation)/2)
-        accuracyList.append(acc)
-        logger.info('[AVERAGE ACCURACY {}] {}'.format(n, acc))'''
+    logger.info('[BERT+GRAPH]\nAverage Accuracy: {}\nAverage Precision: {}\nF1-score: {}\nF1-micro: {}\nF1-macro: {}'.format(graphAccuracy, graphPrecision, graphF1, graphF1micro, graphF1macro))
+    #logger.info('[BERT]\nAverage Accuracy: {}\nAverage Precision: {}\nF1-score: {}\nF1-micro: {}\nF1-macro: {}'.format(embAccuracy, embPrecision, embF1, embF1micro, embF1macro))
+
         
 
 
