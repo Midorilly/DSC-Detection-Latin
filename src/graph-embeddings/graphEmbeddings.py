@@ -146,13 +146,13 @@ def train(models, dims, training, testing, validation, srcPath, epoch):
 
 if __name__ == '__main__':
 
-    dataset = '/home/ghizzotae/machine-learning/ML/data/llkg/llkg-lite-new.tsv'
+    dataset = '../data/llkg/llkg-lite.tsv'
 
     models = ['TransE']
     dims = [2, 8, 16, 32]
     epochs = [5, 10, 20] 
 
-    srcPath = '/home/ghizzotae/machine-learning/ML/pykeen'
+    pykeenPath = '../pykeen'
 
     tf = TriplesFactory.from_path(dataset, entity_to_id=None, relation_to_id=None, create_inverse_triples=True)
     training, testing, validation = tf.split(ratios = [.8, .1, .1], random_state=42)
@@ -160,7 +160,7 @@ if __name__ == '__main__':
     #hpoPath = '/home/ghizzotae/machine-learning/ML/pykeen/hpo'
     #gridSearch(training, testing, validation, models, epochs, dims, hpoPath)
 
-    train(models, dims, training, testing, validation, srcPath, 20)
+    train(models, dims, training, testing, validation, pykeenPath, 20)
 
 
         
