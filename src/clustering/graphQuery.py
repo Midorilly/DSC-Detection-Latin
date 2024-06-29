@@ -56,7 +56,7 @@ sentenceQuery = ''' SELECT ?sentence
     } LIMIT 1
 '''
 
-authorQuery = ''' SELECT ?authorLabel ?bookLabel
+authorQuery = ''' SELECT ?author ?authorLabel ?book ?bookLabel
     WHERE {
         OPTIONAL { ?text rdf:type schema:Quotation ;
                         llkg:hashID ?id ;
