@@ -1,4 +1,0 @@
-rdflib
-oxrdflib
-pykeen
-termcolor
