@@ -78,8 +78,9 @@ def getExternalKnowledge(dataset : pd.DataFrame, mode, embeddings):
     updatedDataset['date'] = pd.Series(dates, index=updatedDataset.index)
     updatedDataset['author'] = pd.Series(authors, index=updatedDataset.index)
     updatedDataset['book'] = pd.Series(books, index=updatedDataset.index)
-    updatedDataset['encodedAuthor'] = pd.Series(encodedAuthors, index=updatedDataset.index)
-    updatedDataset['encodedBook'] = pd.Series(encodedBooks, index=updatedDataset.index)
+    if mode != 'bert':
+        updatedDataset['encodedAuthor'] = pd.Series(encodedAuthors, index=updatedDataset.index)
+        updatedDataset['encodedBook'] = pd.Series(encodedBooks, index=updatedDataset.index)
 
     updatedDataset = combineFeatures(updatedDataset, mode)
 
@@ -97,6 +98,9 @@ def combineFeatures(dataset, mode):
         for i, row in dataset.iterrows():
             c = row['encodedAuthor'].tolist() + row['encodedBook'].tolist() + row['target'].tolist()
             features.append(c)
+    elif mode == 'bert':
+        for i, row in dataset.iterrows():
+            features.append(row['target'].tolist())
     
     dataset['features'] = features
     
@@ -175,11 +179,11 @@ def getBestParams(silhouettes):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('-s', '--sentencesPath', help='path to sentences', required=True)
+    parser.add_argument('-s', '--bertPath', help='path to Latin BERT embeddings', required=True)
     parser.add_argument('-g', '--groundtruthPath', help='path to groundtruth', required=True)
     parser.add_argument('-o', '--outputPath', help='path to output', required=True)
-    parser.add_argument('-e', '--embeddingsPath', help='path to node embeddings', required=True)
-    parser.add_argument('-m', '--mode', help='concat/naive', required=True)
+    parser.add_argument('-e', '--embeddingsPath', help='path to node embeddings', required=False)
+    parser.add_argument('-m', '--mode', help='concat/naive/bert', required=True)
     args = vars(parser.parse_args())
     sentencesPath=args['sentencesPath']
     groundtruthPath=args['groundtruthPath']
@@ -191,8 +195,8 @@ if __name__ == '__main__':
     embeddings = deserialize(embeddingsPath)
     # grid-search
     #silhouettes = gridSearch()
-    #serialize(os.path.join(outputPath, 'silhouettesScore-3hyp.dct'), silhouettes)
-    silhouettes = deserialize(os.path.join(outputPath, 'silhouettesScore.dct'))
+    #serialize(os.path.join(outputPath, 'silhouettesScore-'+mode+'.dct'), silhouettes)
+    silhouettes = deserialize(os.path.join(outputPath, 'silhouettesScore-'+mode+'.dct'))
     bestParams = getBestParams(silhouettes)
     print(bestParams)
 
@@ -201,8 +205,9 @@ if __name__ == '__main__':
 
     evaluation = {}
     predictionDict = {}
-    embList = []
-    graphList = []
+    #embList = []
+    #graphList = []
+    predictionList = []
     
     for idx, row in groundtruth.iterrows():
         if row['word'] in list(bestParams.keys()):
@@ -246,10 +251,11 @@ if __name__ == '__main__':
                         else:
                             bestPrediction = prediction
                     evaluation[(row['word'], name)] = (bestTh, bestAccuracy)
-                    if name == 'emb':
-                        embList.append(bestPrediction)
-                    elif name == 'graph':
-                        graphList.append(bestPrediction)
+                    #if name == 'emb':
+                    #    embList.append(bestPrediction)
+                    #elif name == 'graph':
+                    #    graphList.append(bestPrediction)
+                    predictionList.append(bestPrediction)
 
                     # for plotting
                     pca = PCA(2)
@@ -268,11 +274,11 @@ if __name__ == '__main__':
     serialize(os.path.join(outputPath, 'evaluation.dct'), evaluation)
 
     logger.info('[EVALUATION]')
-    graphAccuracy = metrics.accuracy_score(groundtruth['type'].values.tolist(), graphList)
-    graphPrecision = metrics.average_precision_score(groundtruth['type'].values.tolist(), graphList)
-    graphF1micro = metrics.f1_score(groundtruth['type'].values.tolist(), graphList, average='micro')
-    graphF1macro = metrics.f1_score(groundtruth['type'].values.tolist(), graphList, average='macro')
-    graphF1 = metrics.f1_score(groundtruth['type'].values.tolist(), graphList)
+    accuracy = metrics.accuracy_score(groundtruth['type'].values.tolist(), predictionList)
+    precision = metrics.average_precision_score(groundtruth['type'].values.tolist(), predictionList)
+    f1micro = metrics.f1_score(groundtruth['type'].values.tolist(), predictionList, average='micro')
+    f1macro = metrics.f1_score(groundtruth['type'].values.tolist(), predictionList, average='macro')
+    f1 = metrics.f1_score(groundtruth['type'].values.tolist(), predictionList)
 
     #embAccuracy = metrics.accuracy_score(groundtruth['type'].values.tolist(), embList)
     #embPrecision = metrics.average_precision_score(groundtruth['type'].values.tolist(), embList)
@@ -280,7 +286,7 @@ if __name__ == '__main__':
     #embF1macro = metrics.f1_score(groundtruth['type'].values.tolist(), embList, average='macro')
     #embF1 = metrics.f1_score(groundtruth['type'].values.tolist(), embList)
 
-    logger.info('[BERT+GRAPH]\nAverage Accuracy: {}\nAverage Precision: {}\nF1-score: {}\nF1-micro: {}\nF1-macro: {}'.format(graphAccuracy, graphPrecision, graphF1, graphF1micro, graphF1macro))
+    logger.info('[{}]\nAverage Accuracy: {}\nAverage Precision: {}\nF1-score: {}\nF1-micro: {}\nF1-macro: {}'.format(mode.upper(), accuracy, precision, f1, f1micro, f1macro))
     #logger.info('[BERT]\nAverage Accuracy: {}\nAverage Precision: {}\nF1-score: {}\nF1-micro: {}\nF1-macro: {}'.format(embAccuracy, embPrecision, embF1, embF1micro, embF1macro))
 
         
