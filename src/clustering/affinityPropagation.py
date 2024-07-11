@@ -148,7 +148,7 @@ def gridSearch():
                     enhancedDataset['cluster'] = pd.Series(labels, index=enhancedDataset.index)
                     uniqueLabels = np.unique(labels)
 
-                    if len(uniqueLabels) >= 2:
+                    if len(uniqueLabels) >= 2 and len(uniqueLabels) <= (len(enhancedDataset['features'].values.tolist()) - 1):
                         silhouette = metrics.silhouette_score(X, labels, metric='euclidean')
                         temp.append((row['word'], silhouette))
                         
