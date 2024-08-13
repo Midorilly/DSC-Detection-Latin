@@ -6,6 +6,8 @@ beatus,1
 civitas,1
 cohors,1
 consilium,0
+consul,1
+credo,1
 dolus,1
 dubius,0
 dux,1
@@ -20,9 +22,11 @@ licet,0
 necessarius,0
 nepos,0
 nobilitas,0
+oportet,0
 poena,0
 pontifex,1
 potestas,1
+regnum,0
 sacramentum,1
 salus,0
 sanctus,1
@@ -31,5 +35,7 @@ scriptura,1
 senatus,0
 sensus,0
 simplex,0
+templum,0
 titulus,0
+virtus,1
 voluntas,0
