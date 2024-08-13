@@ -146,7 +146,7 @@ def train(models, dims, training, testing, validation, srcPath, epoch):
 
 if __name__ == '__main__':
 
-    dataset = '../data/llkg/llkg-lite.tsv'
+    dataset = '../data/llkg/llkg-lite-complete.tsv'
 
     models = ['TransE']
     dims = [2, 8, 16, 32]

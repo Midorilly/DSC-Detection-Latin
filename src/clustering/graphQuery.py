@@ -6,7 +6,7 @@ logging.basicConfig(format='%(asctime)s %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 g = Graph(store='Oxigraph')
-g.parse('../data/llkg/llkg-lite.ttl', format='ttl')
+g.parse('../data/llkg/llkg-lite-complete.ttl', format='ttl')
 
 g.bind("rdf", RDF)
 g.bind("rdfs", RDFS)
